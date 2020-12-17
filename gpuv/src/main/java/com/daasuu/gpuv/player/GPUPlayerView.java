@@ -3,6 +3,8 @@ package com.daasuu.gpuv.player;
 import android.content.Context;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
+import android.util.Log;
+
 import com.daasuu.gpuv.egl.GlConfigChooser;
 import com.daasuu.gpuv.egl.GlContextFactory;
 import com.daasuu.gpuv.egl.filter.GlFilter;
@@ -17,7 +19,7 @@ public class GPUPlayerView extends GLSurfaceView implements VideoListener {
     private SimpleExoPlayer player;
 
     private float videoAspect = 1f;
-    private PlayerScaleType playerScaleType = PlayerScaleType.RESIZE_FIT_WIDTH;
+    private PlayerScaleType playerScaleType = PlayerScaleType.RESIZE_FIT_HEIGHT;
 
     public GPUPlayerView(Context context) {
         this(context, null);
@@ -34,14 +36,14 @@ public class GPUPlayerView extends GLSurfaceView implements VideoListener {
 
     }
 
-    public GPUPlayerView setSimpleExoPlayer(SimpleExoPlayer player) {
+    public GPUPlayerView setSimpleExoPlayer(SimpleExoPlayer player,SimpleExoPlayer player2) {
         if (this.player != null) {
             this.player.release();
             this.player = null;
         }
         this.player = player;
         this.player.addVideoListener(this);
-        this.renderer.setSimpleExoPlayer(player);
+        this.renderer.setSimpleExoPlayer(player,player2);
         return this;
     }
 
@@ -64,18 +66,18 @@ public class GPUPlayerView extends GLSurfaceView implements VideoListener {
         int viewWidth = measuredWidth;
         int viewHeight = measuredHeight;
 
-        switch (playerScaleType) {
-            case RESIZE_FIT_WIDTH:
-                viewHeight = (int) (measuredWidth / videoAspect);
-                break;
-            case RESIZE_FIT_HEIGHT:
-                viewWidth = (int) (measuredHeight * videoAspect);
-                break;
-        }
+//        switch (playerScaleType) {
+//            case RESIZE_FIT_WIDTH:
+//                viewHeight = (int) (measuredWidth / videoAspect);
+//                break;
+//            case RESIZE_FIT_HEIGHT:
+//                viewWidth = (int) (measuredHeight * videoAspect);
+//                break;
+//        }
 
-        // Log.d(TAG, "onMeasure viewWidth = " + viewWidth + " viewHeight = " + viewHeight);
+         Log.d(TAG, "onMeasure viewWidth = " + viewWidth + " viewHeight = " + viewHeight);
 
-        setMeasuredDimension(viewWidth, viewHeight);
+        setMeasuredDimension(viewWidth, viewWidth);
 
     }
 

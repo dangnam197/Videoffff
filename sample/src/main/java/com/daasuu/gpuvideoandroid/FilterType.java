@@ -45,7 +45,7 @@ import com.daasuu.gpuv.egl.filter.GlWatermarkFilter;
 import com.daasuu.gpuv.egl.filter.GlWeakPixelInclusionFilter;
 import com.daasuu.gpuv.egl.filter.GlWhiteBalanceFilter;
 import com.daasuu.gpuv.egl.filter.GlZoomBlurFilter;
-import com.daasuu.gpuvideoandroid.filter.GlBitmapOverlaySample;
+import com.daasuu.gpuvideoandroid.filter.GlBitmapTranslate2;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -208,7 +208,9 @@ public enum FilterType {
             case ZOOM_BLUR:
                 return new GlZoomBlurFilter();
             case BITMAP_OVERLAY_SAMPLE:
-                return new GlBitmapOverlaySample(BitmapFactory.decodeResource(context.getResources(), R.drawable.sample_bitmap));
+                return new GlBitmapTranslate2(BitmapFactory.decodeResource(context.getResources(), R.drawable.a1),BitmapFactory.decodeResource(context.getResources(), R.drawable.a2),5000,6000);
+//                return new GlBitmapO1(BitmapFactory.decodeResource(context.getResources(), R.drawable.a1),5000,10000);
+
             default:
                 return new GlFilter();
         }
@@ -280,6 +282,17 @@ public enum FilterType {
                     public void adjust(GlFilter filter, int percentage) {
                         ((GlHighlightShadowFilter) filter).setShadows(range(percentage, 0.0f, 1.0f));
                         ((GlHighlightShadowFilter) filter).setHighlights(range(percentage, 0.0f, 1.0f));
+                    }
+                };
+            case GAUSSIAN_FILTER:
+                return new FilterAdjuster() {
+                    @Override
+                    public void adjust(GlFilter filter, int percentage) {
+                        ((GlGaussianBlurFilter) filter).setBlurSize(range(percentage, 0.0f, 1.0f));
+                        ((GlGaussianBlurFilter) filter).setTexelHeightOffset(range(percentage, 0.0f, 0.05f));
+                        ((GlGaussianBlurFilter) filter).setTexelWidthOffset(range(percentage, 0.0f, 0.05f));
+
+
                     }
                 };
             case HUE:

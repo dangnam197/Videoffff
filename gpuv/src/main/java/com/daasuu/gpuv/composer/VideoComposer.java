@@ -4,11 +4,20 @@ package com.daasuu.gpuv.composer;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.opengl.EGLContext;
 import android.util.Size;
+
+import androidx.annotation.NonNull;
+
+
+import com.daasuu.gpuv.FillMode;
+import com.daasuu.gpuv.FillModeCustomItem;
+import com.daasuu.gpuv.Rotation;
 import com.daasuu.gpuv.egl.filter.GlFilter;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 // Refer: https://android.googlesource.com/platform/cts/+/lollipop-release/tests/tests/media/src/android/media/cts/ExtractDecodeEditEncodeMuxTest.java
 // Refer: https://github.com/ypresto/android-transcoder/blob/master/lib/src/main/java/net/ypresto/androidtranscoder/engine/VideoTrackTranscoder.java
@@ -25,8 +34,6 @@ class VideoComposer {
     private final MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
     private MediaCodec decoder;
     private MediaCodec encoder;
-    private ByteBuffer[] decoderInputBuffers;
-    private ByteBuffer[] encoderOutputBuffers;
     private MediaFormat actualOutputFormat;
     private DecoderSurface decoderSurface;
     private EncoderSurface encoderSurface;
@@ -36,17 +43,21 @@ class VideoComposer {
     private boolean decoderStarted;
     private boolean encoderStarted;
     private long writtenPresentationTimeUs;
-    private final int timeScale;
+    private final float timeScale;
+    private final long trimStartUs;
+    private final long trimEndUs;
 
-    VideoComposer(MediaExtractor mediaExtractor, int trackIndex,
-                  MediaFormat outputFormat, MuxRender muxRender, int timeScale) {
+    VideoComposer(@NonNull MediaExtractor mediaExtractor, int trackIndex,
+                  @NonNull MediaFormat outputFormat, @NonNull MuxRender muxRender, float timeScale,
+                  final long trimStartMs, final long trimEndMs) {
         this.mediaExtractor = mediaExtractor;
         this.trackIndex = trackIndex;
         this.outputFormat = outputFormat;
         this.muxRender = muxRender;
         this.timeScale = timeScale;
+        this.trimStartUs = TimeUnit.MILLISECONDS.toMicros(trimStartMs);
+        this.trimEndUs = trimEndMs == -1 ? trimEndMs : TimeUnit.MILLISECONDS.toMicros(trimEndMs);
     }
-
 
     void setUp(GlFilter filter,
                Rotation rotation,
@@ -56,7 +67,7 @@ class VideoComposer {
                FillModeCustomItem fillModeCustomItem,
                final boolean flipVertical,
                final boolean flipHorizontal) {
-        mediaExtractor.selectTrack(trackIndex);
+//        mediaExtractor.selectTrack(trackIndex);
         try {
             encoder = MediaCodec.createEncoderByType(outputFormat.getString(MediaFormat.KEY_MIME));
         } catch (IOException e) {
@@ -67,9 +78,9 @@ class VideoComposer {
         encoderSurface.makeCurrent();
         encoder.start();
         encoderStarted = true;
-        encoderOutputBuffers = encoder.getOutputBuffers();
 
         MediaFormat inputFormat = mediaExtractor.getTrackFormat(trackIndex);
+        mediaExtractor.seekTo(trimStartUs, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
         if (inputFormat.containsKey("rotation-degrees")) {
             // Decoded video is rotated automatically in Android 5.0 lollipop.
             // Turn off here because we don't want to encode rotated one.
@@ -94,9 +105,7 @@ class VideoComposer {
         decoder.configure(inputFormat, decoderSurface.getSurface(), null, 0);
         decoder.start();
         decoderStarted = true;
-        decoderInputBuffers = decoder.getInputBuffers();
     }
-
 
     boolean stepPipeline() {
         boolean busy = false;
@@ -119,16 +128,13 @@ class VideoComposer {
         return busy;
     }
 
-
     long getWrittenPresentationTimeUs() {
-        return writtenPresentationTimeUs;
+        return (long)(writtenPresentationTimeUs * timeScale);
     }
-
 
     boolean isFinished() {
         return isEncoderEOS;
     }
-
 
     void release() {
         if (decoderSurface != null) {
@@ -159,14 +165,15 @@ class VideoComposer {
         }
         int result = decoder.dequeueInputBuffer(0);
         if (result < 0) return DRAIN_STATE_NONE;
-        if (trackIndex < 0) {
+        if (trackIndex < 0 || (writtenPresentationTimeUs >= trimEndUs && trimEndUs != -1)) {
             isExtractorEOS = true;
             decoder.queueInputBuffer(result, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+            mediaExtractor.unselectTrack(this.trackIndex);
             return DRAIN_STATE_NONE;
         }
-        int sampleSize = mediaExtractor.readSampleData(decoderInputBuffers[result], 0);
+        int sampleSizeCompat = mediaExtractor.readSampleData(decoder.getInputBuffer(result), 0);
         boolean isKeyFrame = (mediaExtractor.getSampleFlags() & MediaExtractor.SAMPLE_FLAG_SYNC) != 0;
-        decoder.queueInputBuffer(result, 0, sampleSize, mediaExtractor.getSampleTime() / timeScale, isKeyFrame ? MediaCodec.BUFFER_FLAG_SYNC_FRAME : 0);
+        decoder.queueInputBuffer(result, 0, sampleSizeCompat, (long)(mediaExtractor.getSampleTime() / timeScale), isKeyFrame ? MediaCodec.BUFFER_FLAG_KEY_FRAME : 0);
         mediaExtractor.advance();
         return DRAIN_STATE_CONSUMED;
     }
@@ -178,6 +185,7 @@ class VideoComposer {
             case MediaCodec.INFO_TRY_AGAIN_LATER:
                 return DRAIN_STATE_NONE;
             case MediaCodec.INFO_OUTPUT_FORMAT_CHANGED:
+                return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
             case MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED:
                 return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
         }
@@ -186,7 +194,9 @@ class VideoComposer {
             isDecoderEOS = true;
             bufferInfo.size = 0;
         }
-        boolean doRender = (bufferInfo.size > 0);
+        final boolean doRender = (bufferInfo.size > 0
+                && bufferInfo.presentationTimeUs >= trimStartUs
+                && (bufferInfo.presentationTimeUs <= trimEndUs || trimEndUs == -1));
         // NOTE: doRender will block if buffer (of encoder) is full.
         // Refer: http://bigflake.com/mediacodec/CameraToMpegTest.java.txt
         decoder.releaseOutputBuffer(result, doRender);
@@ -195,6 +205,8 @@ class VideoComposer {
             decoderSurface.drawImage();
             encoderSurface.setPresentationTime(bufferInfo.presentationTimeUs * 1000);
             encoderSurface.swapBuffers();
+        } else if (bufferInfo.presentationTimeUs != 0) {
+            writtenPresentationTimeUs = bufferInfo.presentationTimeUs;
         }
         return DRAIN_STATE_CONSUMED;
     }
@@ -214,7 +226,6 @@ class VideoComposer {
                 muxRender.onSetOutputFormat();
                 return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
             case MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED:
-                encoderOutputBuffers = encoder.getOutputBuffers();
                 return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
         }
         if (actualOutputFormat == null) {
@@ -230,7 +241,7 @@ class VideoComposer {
             encoder.releaseOutputBuffer(result, false);
             return DRAIN_STATE_SHOULD_RETRY_IMMEDIATELY;
         }
-        muxRender.writeSampleData(MuxRender.SampleType.VIDEO, encoderOutputBuffers[result], bufferInfo);
+        muxRender.writeSampleData(MuxRender.SampleType.VIDEO, encoder.getOutputBuffer(result), bufferInfo);
         writtenPresentationTimeUs = bufferInfo.presentationTimeUs;
         encoder.releaseOutputBuffer(result, false);
         return DRAIN_STATE_CONSUMED;

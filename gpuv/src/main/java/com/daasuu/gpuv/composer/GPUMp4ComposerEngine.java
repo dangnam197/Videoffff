@@ -3,6 +3,10 @@ package com.daasuu.gpuv.composer;
 import android.media.*;
 import android.util.Log;
 import android.util.Size;
+
+import com.daasuu.gpuv.FillMode;
+import com.daasuu.gpuv.FillModeCustomItem;
+import com.daasuu.gpuv.Rotation;
 import com.daasuu.gpuv.egl.filter.GlFilter;
 
 import java.io.FileDescriptor;
@@ -26,6 +30,9 @@ class GPUMp4ComposerEngine {
     private ProgressCallback progressCallback;
     private long durationUs;
     private MediaMetadataRetriever mediaMetadataRetriever;
+
+    private long trimStartMs = 5000;
+    private long trimEndMs = 10000;
 
 
     void setDataSource(FileDescriptor fileDescriptor) {
@@ -92,7 +99,7 @@ class GPUMp4ComposerEngine {
             }
 
             // setup video composer
-            videoComposer = new VideoComposer(mediaExtractor, videoTrackIndex, videoOutputFormat, muxRender, timeScale);
+            videoComposer = new VideoComposer(mediaExtractor, videoTrackIndex, videoOutputFormat, muxRender, timeScale,trimStartMs,trimEndMs);
             videoComposer.setUp(filter, rotation, outputResolution, inputResolution, fillMode, fillModeCustomItem, flipVertical, flipHorizontal);
             mediaExtractor.selectTrack(videoTrackIndex);
 
@@ -101,9 +108,9 @@ class GPUMp4ComposerEngine {
                 // has Audio video
 
                 if (timeScale < 2) {
-                    audioComposer = new AudioComposer(mediaExtractor, audioTrackIndex, muxRender);
+                    audioComposer = new AudioComposer(mediaExtractor, audioTrackIndex, muxRender,trimStartMs,trimStartMs);
                 } else {
-                    audioComposer = new RemixAudioComposer(mediaExtractor, audioTrackIndex, mediaExtractor.getTrackFormat(audioTrackIndex), muxRender, timeScale);
+                    audioComposer = new RemixAudioComposer(mediaExtractor, audioTrackIndex, mediaExtractor.getTrackFormat(audioTrackIndex), muxRender, timeScale,false,trimStartMs,trimEndMs);
                 }
 
                 audioComposer.setup();
@@ -139,8 +146,8 @@ class GPUMp4ComposerEngine {
             }
             try {
                 if (mediaMuxer != null) {
-                    mediaMuxer.release();
-                    mediaMuxer = null;
+//                    mediaMuxer.release();
+//                    mediaMuxer = null;
                 }
             } catch (RuntimeException e) {
                 Log.e(TAG, "Failed to release mediaMuxer.", e);

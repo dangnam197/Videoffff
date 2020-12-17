@@ -26,9 +26,13 @@ import com.google.android.exoplayer2.util.Util;
 
 import java.util.List;
 
+import io.alterac.blurkit.BlurKit;
+
 public class PlayerActivity extends AppCompatActivity {
 
-    private static final String STREAM_URL_MP4_VOD_LONG = "https://www.radiantmediaplayer.com/media/bbb-360p.mp4";
+    private static final String STREAM_URL_MP4_VOD_LONG = "file:///android_asset/v3.mp4";
+    private static final String STREAM_URL_MP4_VOD_LONG2 = "file:///android_asset/v3.mp4";
+
 
     public static void startActivity(Activity activity) {
         Intent intent = new Intent(activity, PlayerActivity.class);
@@ -37,6 +41,8 @@ public class PlayerActivity extends AppCompatActivity {
 
     private GPUPlayerView gpuPlayerView;
     private SimpleExoPlayer player;
+    private SimpleExoPlayer player2;
+
     private Button button;
     private SeekBar timeSeekBar;
     private SeekBar filterSeekBar;
@@ -47,6 +53,7 @@ public class PlayerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        BlurKit.init(this);
         setContentView(R.layout.activity_player);
         setUpViews();
 
@@ -56,6 +63,7 @@ public class PlayerActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         setUpSimpleExoPlayer();
+
         setUoGlPlayerView();
         setUpTimer();
     }
@@ -158,7 +166,7 @@ public class PlayerActivity extends AppCompatActivity {
         // Measures bandwidth during playback. Can be null if not required.
         DefaultBandwidthMeter defaultBandwidthMeter = new DefaultBandwidthMeter();
         // Produces DataSource instances through which media data is loaded.
-        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, "yourApplicationName"), defaultBandwidthMeter);
+        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, getPackageName()), defaultBandwidthMeter);
         MediaSource mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(STREAM_URL_MP4_VOD_LONG));
 
         // SimpleExoPlayer
@@ -168,14 +176,36 @@ public class PlayerActivity extends AppCompatActivity {
         player.setPlayWhenReady(true);
 
     }
+    private void setUpSimpleExoPlayer2() {
+
+        TrackSelector trackSelector = new DefaultTrackSelector();
+
+        // Measures bandwidth during playback. Can be null if not required.
+        DefaultBandwidthMeter defaultBandwidthMeter = new DefaultBandwidthMeter();
+        // Produces DataSource instances through which media data is loaded.
+        DataSource.Factory dataSourceFactory = new DefaultDataSourceFactory(this, Util.getUserAgent(this, getPackageName()), defaultBandwidthMeter);
+        MediaSource mediaSource = new ExtractorMediaSource.Factory(dataSourceFactory).createMediaSource(Uri.parse(STREAM_URL_MP4_VOD_LONG2));
+
+        // SimpleExoPlayer
+//        player = ExoPlayerFactory.newSimpleInstance(this, trackSelector);
+        // Prepare the player with the source.
+        player.prepare(mediaSource);
+        player.setPlayWhenReady(true);
+
+    }
 
 
     private void setUoGlPlayerView() {
         gpuPlayerView = new GPUPlayerView(this);
-        gpuPlayerView.setSimpleExoPlayer(player);
+        gpuPlayerView.setSimpleExoPlayer(player,player2);
         gpuPlayerView.setLayoutParams(new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         ((MovieWrapperView) findViewById(R.id.layout_movie_wrapper)).addView(gpuPlayerView);
         gpuPlayerView.onResume();
+
+        findViewById(R.id.btn_test).setOnClickListener(v -> {
+            setUpSimpleExoPlayer2();
+
+        });
     }
 
 

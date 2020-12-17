@@ -1,14 +1,23 @@
 package com.daasuu.gpuv.egl;
 
+import android.graphics.RectF;
 import android.opengl.GLES20;
+
 import com.daasuu.gpuv.egl.filter.GlFilter;
 
-import static android.opengl.GLES20.*;
+import static android.opengl.GLES20.GL_ARRAY_BUFFER;
+import static android.opengl.GLES20.GL_FLOAT;
+import static android.opengl.GLES20.GL_TEXTURE0;
+import static android.opengl.GLES20.GL_TEXTURE_2D;
+import static android.opengl.GLES20.GL_TRIANGLE_STRIP;
 
 public class GlPreviewFilter extends GlFilter {
 
     public static final int GL_TEXTURE_EXTERNAL_OES = 0x8D65;
-
+    private float cropLeft = 0f;
+    private float cropRight = 1f;
+    private float cropTop = 1f;
+    private float cropBottom = 0f;
     private static final String VERTEX_SHADER =
             "uniform mat4 uMVPMatrix;\n" +
                     "uniform mat4 uSTMatrix;\n" +
@@ -17,14 +26,36 @@ public class GlPreviewFilter extends GlFilter {
                     "attribute vec4 aPosition;\n" +
                     "attribute vec4 aTextureCoord;\n" +
                     "varying highp vec2 vTextureCoord;\n" +
+                    "varying highp vec2 vTextureCoord2;\n" +
+
 
                     "void main() {\n" +
+                    "vTextureCoord2 = aTextureCoord.xy;" +
                     "vec4 scaledPos = aPosition;\n" +
                     "scaledPos.x = scaledPos.x * uCRatio;\n" +
                     "gl_Position = uMVPMatrix * scaledPos;\n" +
                     "vTextureCoord = (uSTMatrix * aTextureCoord).xy;\n" +
                     "}\n";
+    protected static final String DEFAULT_FRAGMENT_SHADER2 =
+            "precision mediump float;\n" +
+                    "varying highp vec2 vTextureCoord;\n" +
+                    "varying highp vec2 vTextureCoord2;\n" +
 
+                    "uniform lowp sampler2D sTexture;\n" +
+                    "uniform highp float cropLeft;\n" +
+                    "uniform highp float cropRight;\n" +
+                    "uniform highp float cropTop;\n" +
+                    "uniform highp float cropBottom;\n" +
+
+                    "void main() {\n" +
+                    "highp vec4 textureColor = texture2D(sTexture, vTextureCoord);\n" +
+                    "if(vTextureCoord2.x<cropLeft || vTextureCoord2.x > cropRight || vTextureCoord2.y < cropBottom || vTextureCoord2.y > cropTop){\n" +
+//                    "if( vTextureCoord2.y<0.5 ){\n" +
+                    "discard;\n" +
+                    "}else{\n" +
+                    "gl_FragColor =  textureColor;\n" +
+                    "}\n" +
+                    "}\n";
     private final int texTarget;
 
     public GlPreviewFilter(final int texTarget) {
@@ -36,14 +67,53 @@ public class GlPreviewFilter extends GlFilter {
         if (texTarget == GL_TEXTURE_EXTERNAL_OES) {
             return new StringBuilder()
                     .append("#extension GL_OES_EGL_image_external : require\n")
-                    .append(DEFAULT_FRAGMENT_SHADER.replace("sampler2D", "samplerExternalOES"))
+                    .append(DEFAULT_FRAGMENT_SHADER2.replace("sampler2D", "samplerExternalOES"))
                     .toString();
         }
-        return DEFAULT_FRAGMENT_SHADER;
+        return DEFAULT_FRAGMENT_SHADER2;
+    }
+//    public void setCrop(RectF crop){
+//        cropLeft = (crop.left+1)/2f;
+//        cropRight = (crop.right +1)/2f;
+//        cropTop = (crop.top +1)/2f;
+//        cropBottom = (crop.bottom +1)/2f;
+//    }
+
+    public void setCrop(float cropLeft,float cropRight,float cropTop,float cropBottom){
+        this.cropLeft =cropLeft;
+        this.cropRight = cropRight;
+        this.cropTop = cropTop;
+        this.cropBottom = cropBottom;
+    }
+    public void resetCrop(){
+        this.cropLeft =0f;
+        this.cropRight = 1f;
+        this.cropTop = 1f;
+        this.cropBottom = 0f;
+    }
+    public void setCropLeft(float cropLeft) {
+        this.cropLeft = cropLeft;
+    }
+
+    public void setCropRight(float cropRight) {
+        this.cropRight = cropRight;
+    }
+
+    public void setCropTop(float cropTop) {
+        this.cropTop = cropTop;
+    }
+
+    public void setCropBottom(float cropBottom) {
+        this.cropBottom = cropBottom;
     }
 
     public void draw(final int texName, final float[] mvpMatrix, final float[] stMatrix, final float aspectRatio) {
         useProgram();
+        GLES20.glUniform1f(getHandle("cropLeft"), cropLeft);
+        GLES20.glUniform1f(getHandle("cropRight"), cropRight);
+
+        GLES20.glUniform1f(getHandle("cropTop"), cropTop);
+        GLES20.glUniform1f(getHandle("cropBottom"), cropBottom);
 
         GLES20.glUniformMatrix4fv(getHandle("uMVPMatrix"), 1, false, mvpMatrix, 0);
         GLES20.glUniformMatrix4fv(getHandle("uSTMatrix"), 1, false, stMatrix, 0);

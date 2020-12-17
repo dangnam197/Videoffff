@@ -28,7 +28,7 @@ public class MovieWrapperView extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int measuredWidth = getMeasuredWidth();
-        setMeasuredDimension(measuredWidth, measuredWidth / 16 * 9);
+        setMeasuredDimension(measuredWidth, measuredWidth / 12 * 12);
     }
 }
 

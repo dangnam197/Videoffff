@@ -25,7 +25,9 @@ public class GlFilterGroup extends GlFilter {
     public GlFilterGroup(final Collection<GlFilter> glFilters) {
         filters = glFilters;
     }
-
+    public void addFilter(GlFilter glFilter){
+        filters.add(glFilter);
+    }
     @Override
     public void setup() {
         super.setup();

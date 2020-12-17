@@ -20,8 +20,9 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
-import com.daasuu.gpuv.composer.FillMode;
+import com.daasuu.gpuv.FillMode;
 import com.daasuu.gpuv.composer.GPUMp4Composer;
+import com.daasuu.gpuv.composer2.Mp4Composer;
 import com.daasuu.gpuv.egl.filter.GlFilter;
 import com.daasuu.gpuv.egl.filter.GlFilterGroup;
 import com.daasuu.gpuv.egl.filter.GlMonochromeFilter;
@@ -54,7 +55,7 @@ public class Mp4ComposeActivity extends AppCompatActivity {
 
     private static final int PERMISSION_REQUEST_CODE = 88888;
 
-    private GPUMp4Composer GPUMp4Composer;
+    private Mp4Composer GPUMp4Composer;
 
     private CheckBox muteCheckBox;
     private CheckBox flipVerticalCheckBox;
@@ -165,7 +166,7 @@ public class Mp4ComposeActivity extends AppCompatActivity {
         findViewById(R.id.start_play_movie).setEnabled(false);
 
         GPUMp4Composer = null;
-        GPUMp4Composer = new GPUMp4Composer(videoItem.getPath(), videoPath)
+        GPUMp4Composer = new Mp4Composer(videoItem.getPath(), videoPath)
                 // .rotation(Rotation.ROTATION_270)
                 //.size(720, 720)
                 .fillMode(FillMode.PRESERVE_ASPECT_CROP)
@@ -173,11 +174,16 @@ public class Mp4ComposeActivity extends AppCompatActivity {
                 .mute(muteCheckBox.isChecked())
                 .flipHorizontal(flipHorizontalCheckBox.isChecked())
                 .flipVertical(flipVerticalCheckBox.isChecked())
-                .listener(new GPUMp4Composer.Listener() {
+                .listener(new Mp4Composer.Listener() {
                     @Override
                     public void onProgress(double progress) {
                         Log.d(TAG, "onProgress = " + progress);
                         runOnUiThread(() -> progressBar.setProgress((int) (progress * 100)));
+                    }
+
+                    @Override
+                    public void onCurrentWrittenVideoTime(long timeUs) {
+
                     }
 
                     @Override

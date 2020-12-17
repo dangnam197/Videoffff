@@ -40,4 +40,6 @@ dependencies {
     implementation 'com.github.bumptech.glide:glide:4.8.0'
 
     implementation project(':gpuv')
+    implementation 'io.alterac.blurkit:blurkit:1.1.0'
+
 }

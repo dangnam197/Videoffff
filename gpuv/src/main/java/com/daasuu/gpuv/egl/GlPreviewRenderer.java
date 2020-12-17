@@ -6,6 +6,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Handler;
+import android.util.Log;
 import android.util.Size;
 import com.daasuu.gpuv.camerarecorder.capture.MediaVideoEncoder;
 import com.daasuu.gpuv.egl.filter.GlFilter;
@@ -16,7 +17,9 @@ import static android.opengl.GLES20.*;
 
 
 
-public class GlPreviewRenderer extends GlFrameBufferObjectRenderer implements SurfaceTexture.OnFrameAvailableListener {
+public class GlPreviewRenderer extends GlFrameBufferObjectRenderer implements
+        SurfaceTexture.OnFrameAvailableListener
+{
 
     private final Handler handler = new Handler();
 
@@ -197,7 +200,7 @@ public class GlPreviewRenderer extends GlFrameBufferObjectRenderer implements Su
 
     @Override
     public void onDrawFrame(GlFramebufferObject fbo) {
-
+        Log.d("testDraw", "onDrawFrame: "+fbo.toString());
         if (drawScale != gestureScale) {
 
             float tempScale = 1 / drawScale;

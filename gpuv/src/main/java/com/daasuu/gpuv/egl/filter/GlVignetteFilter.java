@@ -3,7 +3,6 @@ package com.daasuu.gpuv.egl.filter;
 import android.opengl.GLES20;
 
 
-
 public class GlVignetteFilter extends GlFilter {
 
     private static final String FRAGMENT_SHADER =
@@ -17,10 +16,29 @@ public class GlVignetteFilter extends GlFilter {
                     "uniform highp float vignetteEnd;" +
 
                     "void main() {" +
-                    "lowp vec3 rgb = texture2D(sTexture, vTextureCoord).rgb;" +
-                    "lowp float d = distance(vTextureCoord, vec2(vignetteCenter.x, vignetteCenter.y));" +
-                    "lowp float percent = smoothstep(vignetteStart, vignetteEnd, d);" +
-                    "gl_FragColor = vec4(mix(rgb.x, 0.0, percent), mix(rgb.y, 0.0, percent), mix(rgb.z, 0.0, percent), 1.0);" +
+                    " float Pi = 6.28318530718;" +
+                    "float Directions = 16.0;" +
+                    "float Quality = 3.0;" +
+                    "float Size = 8.0;" +
+                    "    vec2 Radius = Size/vTextureCoord.xy;" +
+                    "    vec2 uv = fragCoord/vTextureCoord.xy;" +
+                    "    vec4 Color = texture(sTexture, uv);" +
+                    "    for( float d=0.0; d<Pi; d+=Pi/Directions)" +
+                    "    {" +
+                    "        for(float i=1.0/Quality; i<=1.0; i+=1.0/Quality)" +
+                    "        {" +
+                    "            Color += texture( iChannel0, uv+vec2(cos(d),sin(d))*Radius*i);" +
+                    "        }" +
+                    "}" +
+
+                    "Color /= Quality * Directions - 15.0;" +
+                    "gl_FragColor =  Color;" +
+
+
+//                    "lowp vec3 rgb = texture2D(sTexture, vTextureCoord).rgb;" +
+//                    "lowp float d = distance(vTextureCoord, vec2(vignetteCenter.x, vignetteCenter.y));" +
+//                    "lowp float percent = smoothstep(vignetteStart, vignetteEnd, d);" +
+//                    "gl_FragColor = vec4(mix(rgb.x, 0.0, percent), mix(rgb.y, 0.0, percent), mix(rgb.z, 0.0, percent), 1.0);" +
                     "}";
 
     private float vignetteCenterX = 0.5f;

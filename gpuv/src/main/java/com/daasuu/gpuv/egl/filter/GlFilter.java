@@ -1,7 +1,10 @@
 package com.daasuu.gpuv.egl.filter;
 
 import android.content.res.Resources;
+import android.graphics.Canvas;
 import android.opengl.GLES20;
+import android.util.Log;
+
 import com.daasuu.gpuv.egl.EglUtil;
 import com.daasuu.gpuv.egl.GlFramebufferObject;
 
@@ -107,7 +110,6 @@ public class GlFilter {
     //
     public void draw(final int texName, final GlFramebufferObject fbo) {
         useProgram();
-
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBufferName);
         GLES20.glEnableVertexAttribArray(getHandle("aPosition"));
         GLES20.glVertexAttribPointer(getHandle("aPosition"), VERTICES_DATA_POS_SIZE, GL_FLOAT, false, VERTICES_DATA_STRIDE_BYTES, VERTICES_DATA_POS_OFFSET);
@@ -117,7 +119,10 @@ public class GlFilter {
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, texName);
         GLES20.glUniform1i(getHandle("sTexture"), 0);
-
+        if(fbo != null) {
+            Log.d("TAG", "draw: "+fbo.toString());
+            onDraw(fbo.getCurrentTime(), fbo.getWidth(), fbo.getHeight());
+        }
         onDraw();
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
@@ -130,7 +135,8 @@ public class GlFilter {
 
     protected void onDraw() {
     }
-
+    public void onDraw(long time, int width, int height) {
+    }
     protected final void useProgram() {
         GLES20.glUseProgram(program);
     }
@@ -141,7 +147,7 @@ public class GlFilter {
 
     protected final int getHandle(final String name) {
         final Integer value = handleMap.get(name);
-        if (value != null) {
+        if (value != null && value != -1) {
             return value;
         }
 
@@ -149,11 +155,23 @@ public class GlFilter {
         if (location == -1) {
             location = GLES20.glGetUniformLocation(program, name);
         }
-        if (location == -1) {
-            throw new IllegalStateException("Could not get attrib or uniform location for " + name);
-        }
+//        if (location == -1) {
+//            throw new IllegalStateException("Could not get attrib or uniform location for " + name);
+//        }
         handleMap.put(name, Integer.valueOf(location));
         return location;
+    }
+    private float[] clearColor = new float[]{0f, 0f, 0f, 1f};
+
+    public float[] getClearColor() {
+        return clearColor;
+    }
+
+    public void setClearColor(float red,
+                              float green,
+                              float blue,
+                              float alpha) {
+        this.clearColor = new float[]{red, green, blue, alpha};
     }
 
 

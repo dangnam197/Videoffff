@@ -27,6 +27,7 @@ public class GlFramebufferObject {
     private int framebufferName;
     private int renderBufferName;
     private int texName;
+    private long currentTime = 0L;
 
     public int getWidth() {
         return width;
@@ -116,5 +117,22 @@ public class GlFramebufferObject {
         GLES20.glBindFramebuffer(GL_FRAMEBUFFER, framebufferName);
     }
 
+    @Override
+    public String toString() {
+        return "GlFramebufferObject{" +
+                "width=" + width +
+                ", height=" + height +
+                ", framebufferName=" + framebufferName +
+                ", renderBufferName=" + renderBufferName +
+                ", texName=" + texName +
+                '}';
+    }
 
+    public long getCurrentTime() {
+        return currentTime;
+    }
+
+    public void setCurrentTime(long currentTime) {
+        this.currentTime = currentTime;
+    }
 }

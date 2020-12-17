@@ -3,6 +3,10 @@ package com.daasuu.gpuv.composer;
 import android.media.MediaMetadataRetriever;
 import android.util.Log;
 import android.util.Size;
+
+import com.daasuu.gpuv.FillMode;
+import com.daasuu.gpuv.FillModeCustomItem;
+import com.daasuu.gpuv.Rotation;
 import com.daasuu.gpuv.egl.filter.GlFilter;
 
 import java.io.File;
